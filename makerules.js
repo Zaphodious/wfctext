@@ -1,23 +1,16 @@
-import {dirs, dirs_mapping, dir_opposites, tileedge} from './directions.js'
+import {dirs, dirs_mapping, dir_opposites} from './directions.js'
 import {range, chars} from './util.js'
-
-
-export function parsemap(map) {
-    let grid = destructure_map(map)
-}
 
 export async function pull_tileset(tileseturl, tilewidth, tileheight, spacing, last_surrounds = false) {
     let text = await (await fetch(tileseturl)).text()
-    let asgrid = destructure_map(text)
-    let inds = tileset_indices(asgrid[0].length, asgrid.length, tilewidth, tileheight, spacing)
-    // for (let ind of inds) {
-    //     console.log(ind.map(c=>c.join('|')).join('\n'))
-    // }
-    let tiles = inds.map(tile=>tile.map(row=>row.map(([x,y])=>asgrid[y][x])))
-    let [mapping, rules] = make_tile_rules(tiles, last_surrounds)
+    let asgrid = destructure_map(text) // Converts the text to an array of arrays of individual characters.
+    let inds = tileset_indices(asgrid[0].length, asgrid.length, tilewidth, tileheight, spacing) // Computes the indices of each symbol of each tile, respecting spacing
+    let tiles = inds.map(tile=>tile.map(row=>row.map(([x,y])=>asgrid[y][x]))) // Seperates out each tile using the indices provided
+    let [mapping, rules] = make_tile_rules(tiles, last_surrounds) // Creates rules for the builder to use, as well as a way to convert a built map from symbols back to tiles
     return [mapping, rules]
 }
 
+// Converts a built map into tiles
 export function expand_computed_map(grid, symbols_to_tiles) {
     let st = Object.values(symbols_to_tiles)[0]
     let tilewidth = st.length
@@ -41,6 +34,7 @@ export function expand_computed_map(grid, symbols_to_tiles) {
     return newgrid
 }
 
+// Complicated function that does two things: first, maps tiles to symbols. second, determines which tiles can be next to each other.
 function make_tile_rules(tiles, last_surrounds = false) {
     let height = tiles[0].length
     let width = tiles[0][0].length
@@ -83,6 +77,7 @@ function make_tile_rules(tiles, last_surrounds = false) {
     return [symbols_to_tiles, rules]
 }
 
+// Used to compute the shannon entropy of a cell. For now, just a count of the number of possibilities that each tile can be next to on each side.
 function weight_for_tile(tilerule) {
     let ret = 0
     for (let dir of dirs) {
@@ -137,10 +132,6 @@ function destructure_map(map) {
     return grid
 }
 
-function into_tiles(grid) {
-
-}
-
 function tile_to_string(tile) {
     let s = ""
     for (let row of tile) {
@@ -157,6 +148,25 @@ function edges_for_tile(tile, asstring = false) {
     for (let dir of dirs) {
         let edge = tileedge(tile, dir)
         ret[dir] = asstring ? edge.join('') : edge
+    }
+    return ret
+}
+
+export function tileedge(tile,dir) {
+    let height = tile.length
+    let width = tile[0].length
+    let tall = dir === 'right' || dir === 'left'
+    let ret = []
+    if (dir === 'right' || dir === 'left') {
+        let centerx = Math.floor(width/2)
+        for (let y of range(0,height)) {
+            let modx = dirs_mapping[dir][0] + centerx
+            ret.push(tile[y][modx])
+        }
+    } else if (dir === 'above') {
+        ret = tile[0]
+    } else if (dir === 'below') {
+        ret = tile[tile.length-1]
     }
     return ret
 }
