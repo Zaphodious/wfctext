@@ -1,1 +1,2 @@
-forcing a bump?
+Github pages doesn't like to update after each commit, so this file exists so
+that I can force a commit without impacting the code files
