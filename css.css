@@ -1,0 +1,16 @@
+@font-face {
+    font-family: IBMCGA;
+    src: url('Web_IBM_CGA.woff');
+}
+* {
+    background-color: black;
+    color: white;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+}
+.example {
+    white-space: pre;
+    word-wrap: hide;
+    font-family: IBMCGA,monospace;
+}
