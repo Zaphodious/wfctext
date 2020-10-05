@@ -31,7 +31,7 @@ async function testit() {
 async function drr(mapmaker, i) {
     let m = mapmaker
     await m.add_tileset(`dungeon${i+1}`,`./tileset${i+1}.txt`, 3, 3, 1, true)
-    let map = await m.generate(`dungeon${i+1}`, 10, 10)
+    let map = await m.generate(`dungeon${i+1}`, 12, 12)
     let strmap = map.map(row=>row.join('')).join('\n')
     console.log(strmap)
     console.log(i)
