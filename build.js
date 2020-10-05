@@ -3,24 +3,20 @@ import * as util from './util.js'
 
 
 export async function make_simple_grid(rules, width, height) {
-    let surrounding = Object.entries(rules).filter(([k,v])=>v.surrounds)[0] // See if one of the options needs to fill the edges of the map
+    let surrounding = Object.entries(rules).filter(([k,v])=>v.surrounds)[0]
     let grid = make_grid(rules, width, height, surrounding)
-    collapseat(grid, Math.floor(width/2),Math.floor(height/2), rules) // Collapse the cell at the center of the map. Not a random location for consistency in testing
-    let homogenous = false
-    let solved = false
-    while (!solved && !homogenous) {
+    collapseat(grid, Math.floor(width/2),Math.floor(height/2), rules)
+    // printgrid(grid)
+    while (!is_solved(grid)) {
         grid = prop_collapse(grid, rules)
         let [cx, cy] = min_entropy_coords(grid, rules)
         collapseat(grid, cx, cy, rules)
-        // If the grid is unsolvable (one of the cells contains no options), or if the grid is boring (contains mostly the same stuff), we redo it
-        if (is_unsolvable(grid) || homogenous) { // The grid is unsolvable if one of the cells has no options. Some versions track changes and rollback- we're just starting over.
+        if (is_unsolvable(grid)) {
             console.log('unsolvable detected, redoing')
             grid = make_grid(rules, width, height, surrounding)
-            collapseat(grid, 2, 2, rules) // For re-do's, we start close to the top left corner to maximize consistency.
+            collapseat(grid, 2, 2, rules)
         }
-        await util.dolater() // This process will loop many times, and awaiting a zero-time timer keeps the browser responsive.
-        solved = is_solved(grid)
-        homogenous = is_homogenous(grid)
+        await util.dolater()
     }
     printgrid(grid)
     return grid
@@ -53,37 +49,41 @@ function surround_with(grid, symbol) {
 }
 
 function prop_collapse(grid, rules) {
-    let changes_made_this_round = false // We track if there are any changes to the grid this iteration, becase we want to keep propigating until there are no changes to make
+    let max_options = Object.keys(rules)
+    let changes_made_this_round = false
     grid = mapgrid(grid, (cell,x,y) => {
-        if (cell.length > 1) { // If a cell array is one element long, then it's collapsed. No use trying to propigate possibilities back to it.
-            for (let dir of dirs) { // directions are left, right, above, and below
-                let [newx,newy] = modcoords([x,y], dirs_mapping[dir]) // dirs_mapping has what to add to a cell's coords to get the cell in that direction. modcoords() does just that
+        if (x == 1 && y == 0) {
+            // debugger
+        }
+        if (cell.length > 1) {
+            for (let dir of dirs) {
+                let [newx,newy] = modcoords([x,y], dirs_mapping[dir])
                 try {
                     let ncell = grid[newy][newx]
-                    ncell[0] // This throws if the cell does not exist, which might happen if the coords are for beyond the level boundary.
+                    ncell[0]
                     let opposite = dir_opposites[dir]
                     let permissible = []
-                    for (let possible_in_cell of ncell) { // For each possibility in the adjascent cells, collect what can be next to them.
+                    for (let possible_in_cell of ncell) {
                         let allowable = rules[possible_in_cell][opposite]
                         permissible = permissible.concat(allowable)
                     }
                     let oldlength = cell.length
-                    cell = cell.filter(n=>{ // Remove possibilities that aren't in the allowable list
+                    cell = cell.filter(n=>{
                         let has = permissible.includes(n)
                         return has
                     })
                     if (oldlength != cell.length) {
                         changes_made_this_round = true
                     }
-                } catch (err) { // We don't care about the error, really. Just that its caught.
+                } catch (err) {
                     // console.error(err)
                 }
             }
         }
-        return cell // This is an anon function, remember
+        return cell
     })
     if (changes_made_this_round) {
-        return prop_collapse(grid, rules) // Recursive and *not* using a while loop, as it was easier to keep things straight while writing this section. The debugger became my friend here. This could be refactored to avoid a potential stack overflow.
+        return prop_collapse(grid, rules)
     } else {
         return grid
     }
@@ -111,8 +111,7 @@ function make_grid(rules, width, height, surrounding) {
     return newgrid
 }
 
-// Utility function to make the results of a simple example easier to see in the terminal.
-function printgrid(grid, print = true) {
+export function printgrid(grid, print = true) {
     let rows = mapgrid(grid, (cell)=>cell.map(n=>n))
     let solved = is_solved(grid)
     if (solved) {
@@ -157,8 +156,6 @@ function mapgrid(grid,func) {
     return grid.map((row,y)=>row.map((cell,x)=>func(cell,x,y,row)))
 }
 
-// This + min_entropy_coords determine which cell is collapsed each iteration. 
-// Pulled almost verbatem from Robert Heaton's code. https://robertheaton.com/2018/12/17/wavefunction-collapse-algorithm/
 function shannon_entropy(grid, x, y, rules, cell) {
     let sum_of_weights = 0
     let sum_of_weight_log_weights = 0
@@ -176,12 +173,13 @@ function shannon_entropy(grid, x, y, rules, cell) {
 }
 
 function min_entropy_coords(grid, rules){
+    let ents = grid.map((row,y)=>row.map((cell,x)=>shannon_entropy(grid,x,y,rules)))
     let lowestx = 0
     let lowesty = 0
     let lowestent = null
 
     grid.forEach((row,y) => {
-        row.forEach((_,x) => {
+        row.forEach((cell,x) => {
             let entropy = shannon_entropy(grid,x,y,rules)
             if ((lowestent===null || entropy < lowestent)) {
                 entropy = entropy + Math.random()
@@ -212,7 +210,9 @@ function is_unsolvable(grid) {
     return false
 }
 
-function pick_weighted(options, rules) { // When determining which option to pick when collapsing a cell, we want _some_ control over how often different elements show up. 
+function pick_weighted(options, rules) {
+    // let lowerfirst = options.sort((f,s)=>rules[f].frequency-rules[s].frequency)
+    let randomo = options.sort((f,s)=>Math.random()-0.5)
     let highest = rules[options[options.length-1]].frequency
     let roll = Math.random() * highest 
     for (let elem of options) {
@@ -222,15 +222,4 @@ function pick_weighted(options, rules) { // When determining which option to pic
         }
     }
     return [options[options.length-1]]
-}
-
-function is_homogenous(grid) {
-    let accum = []
-    for (let row of grid) {
-        for (let cell of row) {
-            accum.push(cell[0])
-        }
-    }
-    let setti = new Set(accum)
-    return setti.size < 6
 }

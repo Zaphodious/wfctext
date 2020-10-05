@@ -2,12 +2,10 @@ import {make_simple_grid} from './build.js'
 import {pull_tileset, expand_computed_map} from './makerules.js'
 import {range} from './util.js'
 
-class MapMaker { // An object to make the API easier to work with.
+class MapMaker {
     constructor() {
         this.tilesets = {}
     }
-
-    // Downloads a tileset, and stores it under the name given
     async add_tileset(name, tileseturl, tilewidth, tileheight, spacing, last_surrounds = false) {
         let [mapping, rules] = await pull_tileset(tileseturl, tilewidth, tileheight, spacing, last_surrounds)
         this.tilesets[name] = {
@@ -15,8 +13,6 @@ class MapMaker { // An object to make the API easier to work with.
         }
         return this
     }
-
-    // Uses a stored tileset to generate a map
     async generate(tileset_name, width, height) {
         let ts = this.tilesets[tileset_name]
         let map = await make_simple_grid(ts.rules, width, height)
@@ -35,7 +31,7 @@ async function testit() {
 async function drr(mapmaker, i) {
     let m = mapmaker
     await m.add_tileset(`dungeon${i+1}`,`./tileset${i+1}.txt`, 3, 3, 1, true)
-    let map = await m.generate(`dungeon${i+1}`, 12, 12)
+    let map = await m.generate(`dungeon${i+1}`, 10, 10)
     let strmap = map.map(row=>row.join('')).join('\n')
     console.log(strmap)
     console.log(i)
