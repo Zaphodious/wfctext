@@ -10,4 +10,6 @@ This began as an adaptation of the very simple version by Robert Heaton here htt
 
 Next, tilesets! The program reads in tilesets defined in text files, and chops them up into discrete tiles. Each tile is mapped to a unique symbol, and those symbols are then used by the algo to generate a map. Once the algo is done doing its work, I convert the symbols back into tiles.
 
-Bonus feature: if indicated, the program will fill the edges of the map with the tile in the bottom right of the tileset. This makes things a little better for roguelikes, as it results in discrete rooms rather then open areas on the edge of the map. The results in the demo page are all done with this edge fill 'on'.
+Bonus feature: if indicated, the program will fill the edges of the map with the tile in the bottom right of the tileset. This makes things a little better for roguelikes, as it results in discrete rooms rather then open areas on the edge of the map. The first three ('tilesetX')
+examples on the demo page are done with edge fill on, while the other four ('giantX') are
+done with edge fill off
