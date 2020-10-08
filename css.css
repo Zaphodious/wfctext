@@ -9,7 +9,10 @@
     margin: 0;
     padding: 0;
 }
-.example {
+button {
+    height: 4em;
+}
+.example, li {
     white-space: pre;
     word-wrap: hide;
     font-family: IBMCGA,monospace;

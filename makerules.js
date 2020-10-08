@@ -8,6 +8,10 @@ export function parsemap(map) {
 
 export async function pull_tileset(tileseturl, tilewidth, tileheight, spacing, last_surrounds = false) {
     let text = await (await fetch(tileseturl)).text()
+    return parse_tileset_text(text, tilewidth, tileheight, spacing, last_surrounds)
+}
+
+export async function parse_tileset_text(text, tilewidth, tileheight, spacing, last_surrounds = false) {
     let asgrid = destructure_map(text)
     let inds = tileset_indices(asgrid[0].length, asgrid.length, tilewidth, tileheight, spacing)
     // for (let ind of inds) {
@@ -132,8 +136,11 @@ function tileset_indices(width, height, tilewidth = 3, tileheight = 3, spacing =
 }
 
 function destructure_map(map) {
+    console.log('destructuring')
     let rows = map.split('\n')
+    console.log(rows)
     let grid = rows.map(row=>row.split(''))
+    console.log(grid)
     return grid
 }
 
