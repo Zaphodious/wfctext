@@ -1,10 +1,17 @@
 import {make_simple_grid} from './build.js'
-import {pull_tileset, expand_computed_map, parse_tileset_text} from './makerules.js'
+import {pull_tileset, expand_computed_map, parse_tileset_text, pull_examplemap} from './makerules.js'
 import {range} from './util.js'
 
 export default class MapMaker {
     constructor() {
         this.tilesets = {}
+    }
+    async add_from_example(name, exampleurl, tilewidth, tileheight) {
+        let [mapping, rules] = await pull_examplemap(exampleurl, tilewidth, tileheight)
+        this.tilesets[name] = {
+            mapping, rules
+        }
+        return this
     }
     async add_tileset(name, tileseturl, tilewidth, tileheight, spacing, last_surrounds = false) {
         let [mapping, rules] = await pull_tileset(tileseturl, tilewidth, tileheight, spacing, last_surrounds)

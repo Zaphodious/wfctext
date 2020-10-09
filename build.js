@@ -213,7 +213,13 @@ function is_unsolvable(grid) {
 function pick_weighted(options, rules) {
     // let lowerfirst = options.sort((f,s)=>rules[f].frequency-rules[s].frequency)
     let randomo = options.sort((f,s)=>Math.random()-0.5)
-    let highest = rules[options[options.length-1]].frequency
+    let highest = 1
+    try {
+    highest = rules[options[options.length-1]].frequency
+    } catch {
+        console.log(options, rules)
+
+    }
     let roll = Math.random() * highest 
     for (let elem of options) {
         let freq = rules[elem].frequency

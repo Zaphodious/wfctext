@@ -1,9 +1,24 @@
 import {dirs, dirs_mapping, dir_opposites, tileedge} from './directions.js'
-import {range, chars} from './util.js'
+import {range} from './util.js'
 
 
 export function parsemap(map) {
     let grid = destructure_map(map)
+}
+
+export async function pull_examplemap(examplemapurl, tilewidth, tileheight) {
+    let text = await (await fetch(examplemapurl)).text()
+    let asgrid = destructure_map(text)
+    let inds = examplemap_indices(asgrid[0].length, asgrid.length, tilewidth, tileheight)
+    let tiles = inds.map(tile=>tile.map(row=>row.map(([x,y])=>asgrid[y][x])))
+    let stringers = tiles.map(tile=>tile.map(row=>row.join('')).join('\n'))
+    for (let s of stringers) {
+        console.log(s)
+    }
+    console.log(tiles.length)
+    let [mapping, rules] = make_tile_rules(tiles)
+    console.log(Object.keys(rules).length)
+    return [mapping, rules]
 }
 
 export async function pull_tileset(tileseturl, tilewidth, tileheight, spacing, last_surrounds = false) {
@@ -20,6 +35,18 @@ export async function parse_tileset_text(text, tilewidth, tileheight, spacing, l
     let tiles = inds.map(tile=>tile.map(row=>row.map(([x,y])=>asgrid[y][x])))
     let [mapping, rules] = make_tile_rules(tiles, last_surrounds)
     return [mapping, rules]
+}
+
+function rotate_tile_90(tile) {
+    let newcell = []
+    for (let x of range(0, tile[0].length)) {
+        let row = []
+        for (let y of range(0, tile.length)) {
+            row.push(tile[y][x])
+        }
+        newcell.push(row)
+    }
+    return newcell
 }
 
 export function expand_computed_map(grid, symbols_to_tiles) {
@@ -53,17 +80,29 @@ function make_tile_rules(tiles, last_surrounds = false) {
     let strings_to_tiles = {}
     let symbols_to_strings = {}
     let symbols_to_edges = {}
+    let strings_to_symbols = {}
+    let symbols_to_repeated = {}
     let last_symbol = ' '
+    let already = new Set([])
     for (let [c,s,t] of associate_tiles(tiles)) {
-        tiles_to_symbols[s] = c
-        symbols_to_tiles[c] = t
-        strings_to_tiles[s] = t
-        symbols_to_strings[c] = s
-        symbols_to_edges[c] = edges_for_tile(t, true)
-        last_symbol = c
+        if (already.has(s)) {
+            let sym = tiles_to_symbols[s]
+            symbols_to_repeated[sym]++
+            last_symbol = sym
+        } else {
+            tiles_to_symbols[s] = c
+            symbols_to_tiles[c] = t
+            strings_to_tiles[s] = t
+            symbols_to_strings[c] = s
+            symbols_to_edges[c] = edges_for_tile(t, true)
+            symbols_to_repeated[c] = 1
+            last_symbol = c
+            already.add(s)
+        }
     }
         // console.log(tiles_to_symbols, symbols_to_tiles, strings_to_tiles, symbols_to_strings)
         // console.log(symbols_to_edges)
+    console.log(symbols_to_repeated)
     let rules = {}
     for (let [sym, edges] of Object.entries(symbols_to_edges)) {
         rules[sym] = {}
@@ -79,7 +118,7 @@ function make_tile_rules(tiles, last_surrounds = false) {
             }
         }
         rules[sym].weight = weight_for_tile(rules[sym])
-        rules[sym].frequency = Math.round((100*Math.random())/(tiles.length*Math.random())) 
+        rules[sym].frequency = (Object.keys(symbols_to_edges).length / symbols_to_repeated[sym]) + Math.random()
     }
     if (last_surrounds) {
         rules[last_symbol].surrounds = true
@@ -100,12 +139,29 @@ function* associate_tiles(tiles) {
     let i = 0
     for (let tile of tiles) {
         let s = tile_to_string(tile)
-        let c = chars[i]
+        let c = i//chars[i]
         i++
         yield [c,s,tile]
     }
 }
 
+function examplemap_indices(width, height, tilewidth=3, tileheight=3) {
+    let tilelist = []
+    for (let cornery of range(0,height-tileheight)) {
+        for (let cornerx of range(0,width-tilewidth)) {
+            let cell = []
+            for (let localy of range(0, tileheight)) {
+                let cellrow = []
+                for (let localx of range(0, tilewidth)) {
+                    cellrow.push([cornerx+localx, cornery+localy])
+                }
+                cell.push(cellrow)
+            }
+            tilelist.push(cell)
+        }
+    }
+    return tilelist
+}
 
 function tileset_indices(width, height, tilewidth = 3, tileheight = 3, spacing = 1) {
     let tileswide = Math.ceil(width/(tilewidth+spacing))
@@ -136,11 +192,9 @@ function tileset_indices(width, height, tilewidth = 3, tileheight = 3, spacing =
 }
 
 function destructure_map(map) {
-    console.log('destructuring')
     let rows = map.split('\n')
-    console.log(rows)
     let grid = rows.map(row=>row.split(''))
-    console.log(grid)
+    grid = grid.filter(n=>n.length != 0)
     return grid
 }
 
